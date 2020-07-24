@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rust-analyzer Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-1.2.0.min.js"></script>
+</head>
+
+<body>
+  <script>
+    function unzip(entries) {
+      const res = new Map();
+      for (const entry of entries) {
+        for (let [key, [value, unit]] of Object.entries(entry.metrics)) {
+          if (!res.has(key)) {
+            res.set(key, {
+              unit: unit,
+              data: []
+            })
+          }
+          res.get(key).data.push(value)
+        }
+      }
+      return res
+    }
+
+    async function main() {
+      const DATA_URL = "https://raw.githubusercontent.com/rust-analyzer/metrics/master/metrics.json"
+      const data = await (await fetch(DATA_URL)).text()
+      const entries = data.split('\n')
+        .filter((it) => it.length > 0)
+        .map((it) => JSON.parse(it));
+      const metrics = unzip(entries)
+
+      const body = document.getElementsByTagName('body')[0];
+      for (const [series, { unit, data }] of metrics) {
+        const plot = document.createElement("div")
+        Plotly.newPlot(plot, [{
+          x: data.map((_, idx) => idx),
+          y: data
+        }], { title: series, yaxis: { title: unit } })
+        body.appendChild(plot)
+      }
+    }
+    main();
+  </script>
+</body>
+
+</html>
