@@ -6,12 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>rust-analyzer Dashboard</title>
   <script src="https://cdn.plot.ly/plotly-1.2.0.min.js"></script>
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+    }
+  </style>
 </head>
 
 <body>
   <script>
     function unzip(entries) {
-      const res = new Map();
+      const res = new Map()
       for (const entry of entries) {
         for (let [key, [value, unit]] of Object.entries(entry.metrics)) {
           if (!res.has(key)) {
@@ -31,20 +38,34 @@
       const data = await (await fetch(DATA_URL)).text()
       const entries = data.split('\n')
         .filter((it) => it.length > 0)
-        .map((it) => JSON.parse(it));
+        .map((it) => JSON.parse(it))
       const metrics = unzip(entries)
 
-      const body = document.getElementsByTagName('body')[0];
-      for (const [series, { unit, data }] of metrics) {
-        const plot = document.createElement("div")
-        Plotly.newPlot(plot, [{
+      const body = document.getElementsByTagName('body')[0]
+      for (let [series, { unit, data }] of metrics) {
+        if (unit == "ms" && data.every((it) => it >= 100)) {
+          unit = "sec"
+          data = data.map((it) => it / 1000)
+        }
+
+        const plotDiv = document.createElement("div")
+        const plotData = [{
           x: data.map((_, idx) => idx),
           y: data
-        }], { title: series, yaxis: { title: unit } })
-        body.appendChild(plot)
+        }]
+        const plotLegend = {
+          title: series,
+          yaxis: {
+            title: unit,
+            rangemode: 'tozero'
+          },
+          width: 1024
+        }
+        Plotly.newPlot(plotDiv, plotData, plotLegend)
+        body.appendChild(plotDiv)
       }
     }
-    main();
+    main()
   </script>
 </body>
 
