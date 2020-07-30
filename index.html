@@ -43,9 +43,18 @@
 
       const body = document.getElementsByTagName('body')[0]
       for (let [series, { unit, data }] of metrics) {
-        if (unit == "ms" && data.every((it) => it >= 100)) {
+        if (unit == "ms" && data.every((it) => it >= 1000)) {
           unit = "sec"
           data = data.map((it) => it / 1000)
+        } else if (unit == "#instr") {
+          if (data.every((it) => it > 1000)) {
+            unit = "# thousand instr"
+            data = data.map((it) => it / 1000)
+            if (data.every((it) => it > 1000)) {
+              unit = "# million instr"
+              data = data.map((it) => it / 1000)
+            }
+          }
         }
 
         const plotDiv = document.createElement("div")
