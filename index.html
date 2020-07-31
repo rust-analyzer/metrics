@@ -18,50 +18,52 @@
 <body>
   <script>
     function unzip(entries) {
-      const res = new Map()
+      const res = new Map();
       for (const entry of entries) {
         for (let [key, [value, unit]] of Object.entries(entry.metrics)) {
           if (!res.has(key)) {
             res.set(key, {
               unit: unit,
-              data: []
-            })
+              data: [],
+              revision: [],
+            });
           }
-          res.get(key).data.push(value)
+          res.get(key).data.push(value);
+          res.get(key).revision.push(entry.revision.substr(0, 6));
         }
       }
       return res
     }
 
     async function main() {
-      const DATA_URL = "https://raw.githubusercontent.com/rust-analyzer/metrics/master/metrics.json"
-      const data = await (await fetch(DATA_URL)).text()
+      const DATA_URL = "https://raw.githubusercontent.com/rust-analyzer/metrics/master/metrics.json";
+      const data = await (await fetch(DATA_URL)).text();
       const entries = data.split('\n')
         .filter((it) => it.length > 0)
-        .map((it) => JSON.parse(it))
-      const metrics = unzip(entries)
+        .map((it) => JSON.parse(it));
+      const metrics = unzip(entries);
 
-      const body = document.getElementsByTagName('body')[0]
-      for (let [series, { unit, data }] of metrics) {
-        if (unit == "ms" && data.every((it) => it >= 1000)) {
-          unit = "sec"
-          data = data.map((it) => it / 1000)
+      const body = document.getElementsByTagName('body')[0];
+      for (let [series, { unit, data, revision }] of metrics) {
+        if (unit == "ms" && data.every(it => it >= 1000)) {
+          unit = "sec";
+          data = data.map(it => it / 1000);
         } else if (unit == "#instr") {
-          if (data.every((it) => it > 1000)) {
-            unit = "# thousand instr"
-            data = data.map((it) => it / 1000)
-            if (data.every((it) => it > 1000)) {
-              unit = "# million instr"
-              data = data.map((it) => it / 1000)
+          if (data.every(it => it > 1000)) {
+            unit = "# thousand instr";
+            data = data.map(it => it / 1000);
+            if (data.every(it => it > 1000)) {
+              unit = "# million instr";
+              data = data.map(it => it / 1000);
             }
           }
         }
 
-        const plotDiv = document.createElement("div")
+        const plotDiv = document.createElement("div");
         const plotData = [{
-          x: data.map((_, idx) => idx),
-          y: data
-        }]
+          x: revision,
+          y: data,
+        }];
         const plotLegend = {
           title: series,
           yaxis: {
@@ -69,12 +71,12 @@
             rangemode: 'tozero'
           },
           width: 1024
-        }
-        Plotly.newPlot(plotDiv, plotData, plotLegend)
-        body.appendChild(plotDiv)
+        };
+        Plotly.newPlot(plotDiv, plotData, plotLegend);
+        body.appendChild(plotDiv);
       }
     }
-    main()
+    main();
   </script>
 </body>
 
