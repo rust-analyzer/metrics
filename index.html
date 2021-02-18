@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>rust-analyzer Dashboard</title>
-  <script src="https://cdn.plot.ly/plotly-1.2.0.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-1.58.4.min.js"></script>
   <style>
     body {
       display: flex;
@@ -28,8 +28,9 @@
               revision: [],
             });
           }
-          res.get(key).data.push(value);
-          res.get(key).revision.push(entry.revision.substr(0, 6));
+          const r = res.get(key);
+          r.data.push(value);
+          r.revision.push(entry.revision.substr(0, 6));
         }
       }
       return res
@@ -44,6 +45,7 @@
       const metrics = unzip(entries);
 
       const body = document.getElementsByTagName('body')[0];
+      const plots = new Map();
       for (let [series, { unit, data, revision }] of metrics) {
         if (unit == "ms" && data.every(it => it >= 1000)) {
           unit = "sec";
@@ -59,20 +61,51 @@
           }
         }
 
-        const plotDiv = document.createElement("div");
-        const plotData = [{
+        let plotName = series;
+        let seriesName;
+        if (plotName.startsWith("analysis-stats/")) {
+          const p = plotName.indexOf("/", 15); "".substring
+          seriesName = plotName.substring(15, p);
+          plotName = plotName.substring(p + 1);
+        } else {
+          seriesName = series;
+        }
+        let plot = plots.get(plotName);
+        if (!plot) {
+          plot = {
+            data: [], layout: {
+              title: plotName,
+              yaxis: {
+                title: unit,
+                rangemode: 'tozero'
+              },
+              width: 1024
+            }
+          };
+          plots.set(plotName, plot);
+        }
+        plot.data.push({
+          name: seriesName,
+          line: {
+            shape: "hv",
+          },
           x: revision,
           y: data,
-        }];
-        const plotLegend = {
-          title: series,
-          yaxis: {
-            title: unit,
-            rangemode: 'tozero'
-          },
-          width: 1024
-        };
-        Plotly.newPlot(plotDiv, plotData, plotLegend);
+        });
+      }
+
+      for (const [title, definition] of plots) {
+        const plotDiv = document.createElement("div");
+        definition.data.sort((a, b) => {
+          if (a.name < b.name) {
+            return -1;
+          } else if (a.name > b.name) {
+            return 1;
+          } else {
+            return 0;
+          }
+        });
+        Plotly.newPlot(plotDiv, definition.data, definition.layout);
         body.appendChild(plotDiv);
       }
     }
