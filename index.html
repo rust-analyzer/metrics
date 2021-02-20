@@ -17,8 +17,7 @@
       display: none;
     }
 
-    .inline-text {
-      display: inline-block;
+    .notification {
       position: fixed;
       top: 1em;
       right: 1em;
@@ -31,7 +30,7 @@
 </head>
 
 <body>
-  <p id="notify-clipboard-text" class="hidden"></p>
+  <div id="notification" class="notification hidden">Commit URL copied to clipboard</div>
   <script>
     function unzip(entries) {
       const res = new Map();
@@ -52,12 +51,12 @@
       return res;
     }
 
-    function show_clipboard_text(text) {
-      var notifyClipboardTextElem = document.getElementById("notify-clipboard-text");
-      notifyClipboardTextElem.textContent = text + " copied to clipboard";
-      notifyClipboardTextElem.className = 'inline-text';
+    function show_notification(text) {
+      var notificationElem = document.getElementById('notification');
+      notificationElem.innerHTML = '<b>' + text + '</b> copied to clipboard';
+      notificationElem.classList.remove('hidden');
       setTimeout(function () {
-        notifyClipboardTextElem.className = 'hidden';
+        notificationElem.classList.add('hidden');
       }, 3000);
     }
 
@@ -65,7 +64,7 @@
       const commit_hash = data.points[0].x;
       const url = `https://github.com/rust-analyzer/rust-analyzer/commit/${commit_hash}`;
       navigator.clipboard.writeText(url);
-      show_clipboard_text(url);
+      show_notification(url);
     }
 
     async function main() {
