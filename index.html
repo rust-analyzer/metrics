@@ -12,10 +12,76 @@
       align-items: center;
       flex-direction: column;
     }
+
+    .hidden {
+      display: none;
+    }
+
+    .inline-text {
+      display: inline-block;
+      position: fixed;
+      top: 0;
+      right: 0;
+      margin-right: 1em;
+      background-color: #FFF3CD;
+      padding: 10px;
+      color: #B3994E;
+    }
+
+    @-webkit-keyframes clipboard-text {
+      0% { display: none; }
+      100% { display: inline-block; }
+    }
+    @-moz-keyframes clipboard-text {
+      0% { display: none; }
+      100% { display: inline-block; }
+    }
+    @-o-keyframes clipboard-text {
+      0% { display: none; }
+      100% { display: inline-block; }
+    }
+    @keyframes clipboard-text {
+      0% { display: none; }
+      100% { display: inline-block; }
+    }
+
+    .clipboard-text-animated {
+      position: fixed;
+      top: 0;
+      right: 0;
+      background-color: #FFF3CD;
+      padding: 10px;
+      color: #B3994E;
+
+      -webkit-animation-name: clipboard-text;
+      -moz-animation-name: clipboard-text;
+      -o-animation-name: clipboard-text;
+      animation-name: clipboard-text;
+
+      -webkit-animation-duration: 4s;
+      -moz-animation-duration: 4s;
+      -o-animation-duration: 4s;
+      animation-duration: 4s;
+
+      -webkit-animation-iteration-count: 2;
+      -moz-animation-iteration-count: 2;
+      -o-animation-iteration-count: 2;
+      animation-iteration-count: 2;
+
+      -webkit-animation-direction: alternate;
+      -moz-animation-direction: alternate;
+      -o-animation-direction: alternate;
+      animation-direction: alternate;
+    }
   </style>
 </head>
 
 <body>
+  <div>
+    <p ></p>
+    <input id="clipboard-input" type="text" class="hidden" value="">
+    <p id="notify-clipboard-text" class="hidden"></p>
+  </div>
   <script>
     function unzip(entries) {
       const res = new Map();
@@ -33,7 +99,36 @@
           r.revision.push(entry.revision.substr(0, 6));
         }
       }
-      return res
+      return res;
+    }
+
+    function copy_to_clipboard(clipboardInputElem, text) {
+      clipboardInputElem.textContent = text;
+      clipboardInputElem.select();
+      clipboardInputElem.setSelectionRange(0, 99999); /* For mobile devices */
+
+      document.execCommand("copy");
+    }
+
+    function show_clipboard_text(commit_hash) {
+      var notifyClipboardTextElem = document.getElementById("notify-clipboard-text");
+      notifyClipboardTextElem.textContent = commit_hash + " copied to clipboard";
+      notifyClipboardTextElem.className = 'inline-text';
+      // notifyClipboardTextElem.className = 'hidden';
+      // notifyClipboardTextElem.textContent = commit_hash + " copied to clipboard";
+      // notifyClipboardTextElem.className = 'clipboard-text-animated';
+      setTimeout(function () {
+        notifyClipboardTextElem.className = 'hidden';
+      }, 3000);
+    }
+
+    function data_point_click(data) {
+      var commit_hash = data.points[0].x;
+      var clipboardInputElem = document.getElementById("clipboard-input");
+      copy_to_clipboard(clipboardInputElem, commit_hash);
+
+      document.execCommand("copy");
+      show_clipboard_text(commit_hash);
     }
 
     async function main() {
@@ -106,6 +201,7 @@
           }
         });
         Plotly.newPlot(plotDiv, definition.data, definition.layout);
+        plotDiv.on("plotly_click", data_point_click);
         body.appendChild(plotDiv);
       }
     }
