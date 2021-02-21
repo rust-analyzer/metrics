@@ -12,10 +12,25 @@
       align-items: center;
       flex-direction: column;
     }
+
+    .hidden {
+      display: none;
+    }
+
+    .notification {
+      position: fixed;
+      top: 1em;
+      right: 1em;
+      background-color: #FFF3CD;
+      padding: 10px;
+      color: #B3994E;
+      z-index: 1;
+    }
   </style>
 </head>
 
 <body>
+  <div id="notification" class="notification hidden"></div>
   <script>
     function unzip(entries) {
       const res = new Map();
@@ -30,10 +45,19 @@
           }
           const r = res.get(key);
           r.data.push(value);
-          r.revision.push(entry.revision.substr(0, 6));
+          r.revision.push(entry.revision.substr(0, 7));
         }
       }
-      return res
+      return res;
+    }
+
+    function show_notification(html_text) {
+      var notificationElem = document.getElementById('notification');
+      notificationElem.innerHTML = html_text;
+      notificationElem.classList.remove('hidden');
+      setTimeout(function () {
+        notificationElem.classList.add('hidden');
+      }, 3000);
     }
 
     async function main() {
@@ -106,6 +130,13 @@
           }
         });
         Plotly.newPlot(plotDiv, definition.data, definition.layout);
+        plotDiv.on("plotly_click", (data) => {
+          const commit_hash = data.points[0].x;
+          const url = `https://github.com/rust-analyzer/rust-analyzer/commit/${commit_hash}`;
+          const notification_text = `Commit <b>${commit_hash}</b> URL copied to clipboard`;
+          navigator.clipboard.writeText(url);
+          show_notification(notification_text);
+        });
         body.appendChild(plotDiv);
       }
     }
