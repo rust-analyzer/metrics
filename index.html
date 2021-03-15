@@ -88,8 +88,9 @@
         let plotName = series;
         let seriesName;
         if (plotName.startsWith("analysis-stats/")) {
-          const p = plotName.indexOf("/", 15); "".substring
+          let p = plotName.indexOf("/", 15);
           seriesName = plotName.substring(15, p);
+          p = plotName.lastIndexOf("/");
           plotName = plotName.substring(p + 1);
         } else {
           seriesName = series;
