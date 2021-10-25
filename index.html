@@ -96,14 +96,14 @@
         let plotName = series;
         let seriesName;
         const analysisStatsPrefix = 'analysis-stats/';
-        const analysisStatsPrefixLength = analysisStatsPrefix.length;
         // Check for aggregated series of form "analysis-stats/<seriesName>/<plotName>"
-        //  - <seriesName> is the project (e.g. "ripgrep", "diesel/diesel")
+        //  - <seriesName> is the project (e.g. "ripgrep", "diesel")
         //  - <plotName> is the metric (e.g. "total memory", "total time"), it cannot contain a `/`
         if (plotName.startsWith(analysisStatsPrefix)) {
-          const p = plotName.lastIndexOf("/");
-          seriesName = plotName.substring(analysisStatsPrefixLength, p);
-          plotName = plotName.substring(p + 1);
+          const plotNameStart = plotName.lastIndexOf("/");
+          const seriesNameStart = plotName.lastIndexOf("/", plotNameStart - 1);
+          seriesName = plotName.substring(seriesNameStart + 1, plotNameStart);
+          plotName = plotName.substring(plotNameStart + 1);
         } else {
           seriesName = series;
         }
