@@ -33,6 +33,7 @@
   <div id="notification" class="notification hidden"></div>
   <script>
     function unzip(entries) {
+      const revisionsMap = new Map();
       const res = new Map();
       for (const entry of entries) {
         for (let [key, [value, unit]] of Object.entries(entry.metrics)) {
@@ -45,10 +46,17 @@
           }
           const r = res.get(key);
           r.data.push(value);
-          r.revision.push(entry.revision.substr(0, 7));
+          const revisionHash = entry.revision.substr(0, 7);
+          r.revision.push(revisionHash);
+          revisionsMap.set(revisionHash, entry.timestamp);
         }
       }
-      return res;
+
+      const sortedRevisionsHash = Array.from(revisionsMap)
+        .sort(([, t1], [, t2]) => t1 - t2) // Sort by timestamp
+        .map(([hash]) => hash); // Extract only the hash
+
+      return [res, sortedRevisionsHash];
     }
 
     function show_notification(html_text) {
@@ -66,7 +74,7 @@
       const entries = data.split('\n')
         .filter((it) => it.length > 0)
         .map((it) => JSON.parse(it));
-      const metrics = unzip(entries);
+      const [metrics, revisions] = unzip(entries);
 
       const body = document.getElementsByTagName('body')[0];
       const plots = new Map();
@@ -87,9 +95,14 @@
 
         let plotName = series;
         let seriesName;
-        if (plotName.startsWith("analysis-stats/")) {
-          const p = plotName.indexOf("/", 15); "".substring
-          seriesName = plotName.substring(15, p);
+        const analysisStatsPrefix = 'analysis-stats/';
+        const analysisStatsPrefixLength = analysisStatsPrefix.length;
+        // Check for aggregated series of form "analysis-stats/<seriesName>/<plotName>"
+        //  - <seriesName> is the project (e.g. "ripgrep", "diesel/diesel")
+        //  - <plotName> is the metric (e.g. "total memory", "total time"), it cannot contain a `/`
+        if (plotName.startsWith(analysisStatsPrefix)) {
+          const p = plotName.lastIndexOf("/");
+          seriesName = plotName.substring(analysisStatsPrefixLength, p);
           plotName = plotName.substring(p + 1);
         } else {
           seriesName = series;
@@ -97,7 +110,8 @@
         let plot = plots.get(plotName);
         if (!plot) {
           plot = {
-            data: [], layout: {
+            data: [],
+            layout: {
               title: plotName,
               yaxis: {
                 title: unit,
@@ -120,6 +134,14 @@
 
       for (const [title, definition] of plots) {
         const plotDiv = document.createElement("div");
+
+        // As every metrics does not have the same historic revisions we specify the order
+        definition.layout.xaxis = {
+          type: 'category',
+          categoryorder: 'array',
+          categoryarray: revisions
+        }
+
         definition.data.sort((a, b) => {
           if (a.name < b.name) {
             return -1;
