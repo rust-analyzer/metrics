@@ -24,6 +24,7 @@ interface Entry {
 interface Metric {
     unit: Unit
     data: number[]
+    revision: string[]
     timestamp: number[]
 }
 
@@ -66,6 +67,7 @@ function unzip(entries: Entry[], start: number | null, end: number | null): [Map
                 res.set(key, {
                     unit: unit,
                     data: [],
+                    revision: [],
                     timestamp: [],
                 });
             }
@@ -73,6 +75,7 @@ function unzip(entries: Entry[], start: number | null, end: number | null): [Map
             r.data.push(value);
             r.timestamp.push(entry.timestamp);
             const revisionHash = entry.revision.substr(0, 7);
+            r.revision.push(revisionHash);
             revisionsMap.set(revisionHash, entry.timestamp);
         }
     }
@@ -107,7 +110,7 @@ async function main() {
     const bodyElement = document.getElementById("inner")!;
     const plots = new Map<string, Plots>();
 
-    for (let [series, { unit, data, timestamp }] of metrics) {
+    for (let [series, { unit, data, revision, timestamp }] of metrics) {
         if (unit == "ms" && data.every(it => it >= 1000)) {
             unit = "sec";
             data = data.map(it => it / 1000);
@@ -164,6 +167,7 @@ async function main() {
             };
             plots.set(plotName, plot);
         }
+
         plot.data.push({
             name: seriesName,
             line: {
@@ -171,7 +175,7 @@ async function main() {
             },
             x: timestamp.map(n => new Date(n * 1000)),
             y: data,
-            hovertext: revisions,
+            hovertext: revision,
             hovertemplate: `%{y} ${unit}<br>(%{hovertext})`,
         });
     }
