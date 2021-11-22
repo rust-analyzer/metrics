@@ -31,13 +31,13 @@ function unzip(entries, start, end) {
                 res.set(key, {
                     unit: unit,
                     data: [],
-                    revision: [],
+                    timestamp: [],
                 });
             }
             const r = res.get(key);
             r.data.push(value);
+            r.timestamp.push(entry.timestamp);
             const revisionHash = entry.revision.substr(0, 7);
-            r.revision.push(revisionHash);
             revisionsMap.set(revisionHash, entry.timestamp);
         }
     }
@@ -61,10 +61,11 @@ async function main() {
         .filter((it) => it.length > 0)
         .map((it) => JSON.parse(it));
     const [start, end] = parseQueryString();
+    setTimeFrameInputs(start, end);
     const [metrics, revisions] = unzip(entries, start ? +start / 1000 : null, end ? +end / 1000 : null);
     const bodyElement = document.getElementById("inner");
     const plots = new Map();
-    for (let [series, { unit, data, revision }] of metrics) {
+    for (let [series, { unit, data, timestamp }] of metrics) {
         if (unit == "ms" && data.every(it => it >= 1000)) {
             unit = "sec";
             data = data.map(it => it / 1000);
@@ -100,11 +101,24 @@ async function main() {
                 data: [],
                 layout: {
                     title: plotName,
+                    xaxis: {
+                        type: 'date',
+                    },
                     yaxis: {
                         title: unit,
                         rangemode: 'tozero'
                     },
-                    width: Math.min(1024, window.innerWidth),
+                    width: Math.min(1200, window.innerWidth - 30),
+                    margin: {
+                        l: 50,
+                        r: 20,
+                        b: 100,
+                        t: 100,
+                        pad: 4,
+                    },
+                    legend: {
+                        orientation: window.innerWidth < 700 ? "h" : "v"
+                    }
                 }
             };
             plots.set(plotName, plot);
@@ -114,18 +128,14 @@ async function main() {
             line: {
                 shape: "hv",
             },
-            x: revision,
+            x: timestamp.map(n => new Date(n * 1000)),
             y: data,
+            hovertext: revisions,
+            hovertemplate: `%{y} ${unit}<br>(%{hovertext})`,
         });
     }
     for (const [title, definition] of plots) {
         const plotDiv = document.createElement("div");
-        // As every metrics does not have the same historic revisions we specify the order
-        definition.layout.xaxis = {
-            type: 'category',
-            categoryorder: 'array',
-            categoryarray: revisions
-        };
         definition.data.sort((a, b) => {
             if (a.name < b.name) {
                 return -1;
@@ -139,7 +149,7 @@ async function main() {
         });
         Plotly.newPlot(plotDiv, definition.data, definition.layout);
         plotDiv.on("plotly_click", (data) => {
-            const commit_hash = data.points[0].x;
+            const commit_hash = data.points[0].hovertext;
             const url = `https://github.com/rust-analyzer/rust-analyzer/commit/${commit_hash}`;
             const notification_text = `Commit <b>${commit_hash}</b> URL copied to clipboard`;
             navigator.clipboard.writeText(url);
@@ -148,12 +158,19 @@ async function main() {
         bodyElement.appendChild(plotDiv);
     }
 }
-main();
 function setDays(n) {
     const timestamp = +new Date() - (n * 1000 * 60 * 60 * 24);
     const date = new Date(timestamp);
+    setTimeFrameInputs(date, null);
+}
+function getTimeFrameInputs() {
     const start = document.getElementsByName('start')[0];
     const end = document.getElementsByName('end')[0];
-    start.value = date.toISOString().split('T')[0];
-    end.value = "";
+    return [start, end];
 }
+function setTimeFrameInputs(start, end) {
+    const [startInput, endInput] = getTimeFrameInputs();
+    startInput.value = start ? start.toISOString().split("T")[0] : "";
+    endInput.value = end ? end.toISOString().split("T")[0] : "";
+}
+main();
