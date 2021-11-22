@@ -1,0 +1,27 @@
+{
+  "files": ["script.ts"],
+
+  "compilerOptions": {
+    /* Visit https://aka.ms/tsconfig.json to read more about this file */
+
+    /* Language and Environment */
+    "target": "ES2017",
+     "lib": ["DOM", "ESNext"],
+
+    /* Modules */
+    "module": "ES6",
+
+    /* Emit */
+    // "sourceMap": true,
+     "downlevelIteration": true,
+
+    /* Interop Constraints */
+    // "isolatedModules": true,
+    // "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Type Checking */
+    "strict": true,
+    "skipLibCheck": true
+  }
+}

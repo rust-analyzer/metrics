@@ -1,0 +1,18 @@
+{
+  "name": "metrics",
+  "description": "Stores performance metrics for rust-analyzer.",
+  "version": "1.0.0",
+  "devDependencies": {
+    "typescript": "^4.5.2",
+    "@types/plotly.js": "^1.54.16"
+  },
+  "scripts": {
+    "build": "./node_modules/typescript/bin/tsc -p tsconfig.json",
+    "start": "./node_modules/typescript/bin/tsc -p tsconfig.json --watch"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rust-analyzer/metrics/issues"
+  },
+  "homepage": "https://github.com/rust-analyzer/metrics#readme"
+}
