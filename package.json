@@ -10,7 +10,7 @@
     "build": "./node_modules/typescript/bin/tsc -p tsconfig.json",
     "start": "./node_modules/typescript/bin/tsc -p tsconfig.json --watch"
   },
-  "license": "ISC",
+  "license": "MIT OR Apache-2.0",
   "bugs": {
     "url": "https://github.com/rust-analyzer/metrics/issues"
   },
