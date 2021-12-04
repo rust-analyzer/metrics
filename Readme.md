@@ -8,7 +8,7 @@ Metrics are automatically published by GitHub Actions.
 
 ```sh
 # install dev-dependencies:
-npm install
+npm ci
 # compile typescript and watch for file changes:
 npm start
 ```
@@ -19,3 +19,7 @@ npm start
 # compile typescript:
 npm run build
 ```
+
+## License
+
+Dual-licensed under [Apache 2.0](LICENSE-APACHE) and [MIT license](LICENSE-MIT).
