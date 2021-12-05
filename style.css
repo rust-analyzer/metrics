@@ -1,0 +1,35 @@
+body {
+    margin: 0 15px;
+}
+
+#inner {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 1.6rem;
+}
+
+.hidden {
+    display: none;
+}
+
+.notification {
+    position: fixed;
+    top: 1em;
+    right: 1em;
+    background-color: #FFF3CD;
+    padding: 10px;
+    color: #B3994E;
+    z-index: 1;
+}
+
+form {
+    padding: 10px;
+}
+
+form button {
+    margin: 10px 0 0 0;
+}
