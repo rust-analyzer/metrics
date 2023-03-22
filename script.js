@@ -64,7 +64,7 @@ async function main() {
         .map((it) => JSON.parse(it));
     const [start, end] = parseQueryString();
     setTimeFrameInputs(start, end);
-    const [metrics, revisions] = unzip(entries, start ? +start / 1000 : null, end ? +end / 1000 : null);
+    const [metrics, _revisions] = unzip(entries, start ? +start / 1000 : null, end ? +end / 1000 : null);
     const bodyElement = document.getElementById("inner");
     const plots = new Map();
     for (let [series, { unit, data, revision, timestamp }] of metrics) {
@@ -136,7 +136,9 @@ async function main() {
             hovertemplate: `%{y} ${unit}<br>(%{hovertext})`,
         });
     }
-    for (const [title, definition] of plots) {
+    const sortedPlots = Array.from(plots.entries());
+    sortedPlots.sort(([t,], [t2,]) => t.localeCompare(t2));
+    for (const [, definition] of sortedPlots) {
         const plotDiv = document.createElement("div");
         definition.data.sort((a, b) => {
             if (a.name < b.name) {
