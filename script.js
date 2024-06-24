@@ -66,11 +66,11 @@ function unzip(entries, start, end) {
         // Check for aggregated series of form "analysis-stats/<seriesName>/<plotName>"
         //  - <seriesName> is the project (e.g. "ripgrep", "diesel")
         //  - <plotName> is the metric (e.g. "total memory", "total time"), it cannot contain a `/`
-        if (plotName.startsWith(analysisStatsPrefix)) {
-            const plotNameStart = plotName.lastIndexOf('/');
-            const seriesNameStart = plotName.lastIndexOf('/', plotNameStart - 1);
-            plotName = plotName.substring(plotNameStart + 1);
-            metric.project = plotName.substring(seriesNameStart + 1, plotNameStart);
+        if (key.startsWith(analysisStatsPrefix)) {
+            const [_prefix, project, plot, maybePlot] = key.split('/');
+            // we incorrectly emitted diesel/diesel at some point, so fix that here
+            plotName = project === 'diesel' ? maybePlot : plot;
+            metric.project = project;
         }
         if (!newRes.has(plotName)) {
             newRes.set(plotName, [[], metric.unit]);
@@ -145,6 +145,9 @@ async function main() {
                 y: data,
                 hovertext: revision,
                 hovertemplate: `%{y} ${unit}<br>(%{hovertext})`,
+                visible: !(project === 'ripgrep' ||
+                    project === 'diesel' ||
+                    project === 'webrender'),
             });
         }
     }
