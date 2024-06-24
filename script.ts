@@ -1,4 +1,4 @@
-type Unit = "MB" | "ms" | "sec" | "#instr" | "# thousand instr" | "# million instr"
+type Unit = "MB" | "ms" | "sec"
 type MemoryMetric = [number, "MB"]
 type TimeMetric = [number, "ms"]
 
@@ -37,7 +37,7 @@ function parseQueryString(): [Date | null, Date | null] {
     let start: Date | null = null;
     let end: Date | null = null;
     if (location.search != "") {
-        const params = location.search.substr(1).split("&");
+        const params = location.search.substring(1).split("&");
         for (const param of params) {
             const [name, value] = param.split("=", 2);
             if (value === "") {
@@ -53,6 +53,15 @@ function parseQueryString(): [Date | null, Date | null] {
     return [start, end]
 }
 
+function mapUnitToMax(unit: Unit): Unit {
+    switch (unit) {
+        case "ms":
+            return "sec";
+        default:
+            return unit;
+    }
+}
+
 function unzip(entries: Entry[], start: number | null, end: number | null): [Map<string, Metric>, string[]] {
     const revisionsMap = new Map<string, number>();
     const res = new Map<string, Metric>();
@@ -65,16 +74,21 @@ function unzip(entries: Entry[], start: number | null, end: number | null): [Map
         for (let [key, [value, unit]] of Object.entries(entry.metrics)) {
             if (!res.has(key)) {
                 res.set(key, {
-                    unit: unit,
+                    unit: mapUnitToMax(unit),
                     data: [],
                     revision: [],
                     timestamp: [],
                 });
             }
             const r = res.get(key)!;
+
+            if (unit == "ms" && value < 1000) {
+                r.unit = "ms";
+            }
+
             r.data.push(value);
             r.timestamp.push(entry.timestamp);
-            const revisionHash = entry.revision.substr(0, 7);
+            const revisionHash = entry.revision.substring(0, entry.revision.length - 7);
             r.revision.push(revisionHash);
             revisionsMap.set(revisionHash, entry.timestamp);
         }
@@ -111,18 +125,8 @@ async function main() {
     const plots = new Map<string, Plots>();
 
     for (let [series, { unit, data, revision, timestamp }] of metrics) {
-        if (unit == "ms" && data.every(it => it >= 1000)) {
-            unit = "sec";
+        if (unit == "sec") {
             data = data.map(it => it / 1000);
-        } else if (unit == "#instr") {
-            if (data.every(it => it > 1000)) {
-                unit = "# thousand instr";
-                data = data.map(it => it / 1000);
-                if (data.every(it => it > 1000)) {
-                    unit = "# million instr";
-                    data = data.map(it => it / 1000);
-                }
-            }
         }
 
         let plotName = series;
