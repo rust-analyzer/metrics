@@ -2,7 +2,7 @@ type Unit = 'MB' | 'ms' | 'sec';
 type MemoryMetric = [number, 'MB'];
 type TimeMetric = [number, 'ms'];
 
-interface Entry {
+type Entry = {
     host: {
         os: string;
         cpu: string;
@@ -11,27 +11,22 @@ interface Entry {
     timestamp: number;
     revision: string;
     metrics: {
-        'analysis-stats/ripgrep/total memory'?: MemoryMetric;
-        'analysis-stats/ripgrep/total time'?: TimeMetric;
-        'analysis-stats/self/total memory'?: MemoryMetric;
-        'analysis-stats/self/total time'?: TimeMetric;
-        'analysis-stats/webrender/total memory'?: MemoryMetric;
-        'analysis-stats/webrender/total time'?: TimeMetric;
         build?: TimeMetric;
+        [key: `analysis-stats/${string}/${string}`]: TimeMetric | MemoryMetric;
     };
-}
+};
 
-interface Metric {
-    unit: Unit;
+type Metric = {
+    project?: string;
     data: number[];
     revision: string[];
     timestamp: number[];
-}
+};
 
-interface Plots {
+type Plots = {
     data: (Plotly.Data & { name: string })[];
     layout: Partial<Plotly.Layout>;
-}
+};
 
 function parseQueryString(): [Date | null, Date | null] {
     let start: Date | null = null;
@@ -66,9 +61,9 @@ function unzip(
     entries: Entry[],
     start: number | null,
     end: number | null
-): [Map<string, Metric>, string[]] {
+): [Map<string, [Metric[], Unit]>, string[]] {
     const revisionsMap = new Map<string, number>();
-    const res = new Map<string, Metric>();
+    const res = new Map<keyof Entry['metrics'], Metric & { unit: Unit }>();
 
     for (const entry of entries) {
         if (
@@ -78,7 +73,11 @@ function unzip(
             continue;
         }
 
-        for (let [key, [value, unit]] of Object.entries(entry.metrics)) {
+        const entries = Object.entries(entry.metrics) as [
+            keyof Entry['metrics'],
+            TimeMetric | MemoryMetric
+        ][];
+        for (let [key, [value, unit]] of entries) {
             if (!res.has(key)) {
                 res.set(key, {
                     unit: mapUnitToMax(unit),
@@ -108,7 +107,38 @@ function unzip(
         .sort(([, t1], [, t2]) => t1 - t2) // Sort by timestamp
         .map(([hash]) => hash); // Extract only the hash
 
-    return [res, sortedRevisionsHash];
+    let newRes = new Map<string, [Metric[], Unit]>();
+
+    for (let [key, metric] of res) {
+        let plotName: string = key;
+        const analysisStatsPrefix = 'analysis-stats/';
+        // Check for aggregated series of form "analysis-stats/<seriesName>/<plotName>"
+        //  - <seriesName> is the project (e.g. "ripgrep", "diesel")
+        //  - <plotName> is the metric (e.g. "total memory", "total time"), it cannot contain a `/`
+        if (plotName.startsWith(analysisStatsPrefix)) {
+            const plotNameStart = plotName.lastIndexOf('/');
+            const seriesNameStart = plotName.lastIndexOf(
+                '/',
+                plotNameStart - 1
+            );
+            plotName = plotName.substring(plotNameStart + 1);
+            metric.project = plotName.substring(
+                seriesNameStart + 1,
+                plotNameStart
+            );
+        }
+
+        if (!newRes.has(plotName)) {
+            newRes.set(plotName, [[], metric.unit]);
+        }
+        const entry = newRes.get(plotName)!;
+        entry[0].push(metric);
+        if (entry[1] == 'sec' && metric.unit == 'ms') {
+            entry[1] = 'ms';
+        }
+    }
+
+    return [newRes, sortedRevisionsHash];
 }
 
 function show_notification(html_text: string) {
@@ -140,28 +170,7 @@ async function main() {
     const bodyElement = document.getElementById('inner')!;
     const plots = new Map<string, Plots>();
 
-    for (let [series, { unit, data, revision, timestamp }] of metrics) {
-        if (unit == 'sec') {
-            data = data.map((it) => it / 1000);
-        }
-
-        let plotName = series;
-        let seriesName: string;
-        const analysisStatsPrefix = 'analysis-stats/';
-        // Check for aggregated series of form "analysis-stats/<seriesName>/<plotName>"
-        //  - <seriesName> is the project (e.g. "ripgrep", "diesel")
-        //  - <plotName> is the metric (e.g. "total memory", "total time"), it cannot contain a `/`
-        if (plotName.startsWith(analysisStatsPrefix)) {
-            const plotNameStart = plotName.lastIndexOf('/');
-            const seriesNameStart = plotName.lastIndexOf(
-                '/',
-                plotNameStart - 1
-            );
-            seriesName = plotName.substring(seriesNameStart + 1, plotNameStart);
-            plotName = plotName.substring(plotNameStart + 1);
-        } else {
-            seriesName = series;
-        }
+    for (let [plotName, [metric, unit]] of metrics) {
         let plot = plots.get(plotName);
         if (!plot) {
             plot = {
@@ -190,17 +199,22 @@ async function main() {
             };
             plots.set(plotName, plot);
         }
+        for (let { data, revision, timestamp, project } of metric) {
+            if (unit == 'sec') {
+                data = data.map((it) => it / 1000);
+            }
 
-        plot.data.push({
-            name: seriesName,
-            line: {
-                shape: 'hv',
-            },
-            x: timestamp.map((n) => new Date(n * 1000)),
-            y: data,
-            hovertext: revision,
-            hovertemplate: `%{y} ${unit}<br>(%{hovertext})`,
-        });
+            plot.data.push({
+                name: project ?? plotName,
+                line: {
+                    shape: 'hv',
+                },
+                x: timestamp.map((n) => new Date(n * 1000)),
+                y: data,
+                hovertext: revision,
+                hovertemplate: `%{y} ${unit}<br>(%{hovertext})`,
+            });
+        }
     }
     const sortedPlots = Array.from(plots.entries());
     sortedPlots.sort(([t], [t2]) => t.localeCompare(t2));
