@@ -116,16 +116,10 @@ function unzip(
         //  - <seriesName> is the project (e.g. "ripgrep", "diesel")
         //  - <plotName> is the metric (e.g. "total memory", "total time"), it cannot contain a `/`
         if (plotName.startsWith(analysisStatsPrefix)) {
-            const plotNameStart = plotName.lastIndexOf('/');
-            const seriesNameStart = plotName.lastIndexOf(
-                '/',
-                plotNameStart - 1
-            );
-            plotName = plotName.substring(plotNameStart + 1);
-            metric.project = plotName.substring(
-                seriesNameStart + 1,
-                plotNameStart
-            );
+            const plotNameStart = key.lastIndexOf('/');
+            const seriesNameStart = key.lastIndexOf('/', plotNameStart - 1);
+            plotName = key.substring(plotNameStart + 1);
+            metric.project = key.substring(seriesNameStart + 1, plotNameStart);
         }
 
         if (!newRes.has(plotName)) {
